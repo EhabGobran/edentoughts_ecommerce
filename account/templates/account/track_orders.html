@@ -1,0 +1,42 @@
+{% include 'store/base.html' %}
+
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<body>
+    <style>
+
+    body{
+        background-color: gray;
+        }
+
+    </style>
+    <br>
+
+    <div class="container bg-white shadow-md p-5 form_layout">
+
+        <h2><i class="fa fa-paper-plane text-success" aria-hidden="true"></i> &nbsp; Order tracking</h2>
+
+    </div>
+    <br>
+    <div class="container bg-white shadow-md p-5 form_layout">
+        {% for order in orders %}
+        <br>
+            <strong><i class="fa fa-paper-plane-o text-success" aria-hidden="true"></i> &nbsp;order-id#- {{order.pk}}</strong>
+            <br>
+            {{order.product}}
+            <br>
+            Quantity : {{order.quantity}}
+            <br>
+            Price : ${{order.price}}
+
+            <hr>
+        {% endfor %}
+    </div>
+
+
+</body>
+
+{% endblock %}

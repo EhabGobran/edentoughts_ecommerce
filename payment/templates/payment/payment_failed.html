@@ -1,0 +1,31 @@
+{% include "store/base.html" %}
+
+{% load static %}
+
+{% block content %}
+
+<body>
+    <style>
+
+    body{
+        background-color: gray;
+        }
+
+    </style>
+
+    <br>
+    <div class="container bg-white shadow-md p-5 form_layout">
+        <div class="text-center">
+            <i class="fa fa-credit-card-alt fa-4x text-danger" aria-hidden="true"></i>
+            <br> <br>
+            <h5> 
+                    <strong> Payment failed </strong> </h5>
+            <hr>
+            <p>your order got declined</p>
+        </div>
+
+    </div>
+
+</body>
+
+{% endblock %}

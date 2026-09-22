@@ -1,0 +1,1 @@
+web: daphne -b 0.0.0.0 -p 5000 ecommerce.asgi:application

@@ -1,0 +1,4 @@
+{% autoescape off %}
+here is the verification link:
+{{protocol}}://{{domain}}{% url 'email_verification' uidb64=uid token=token %}
+{% endautoescape %}

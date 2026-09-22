@@ -1,0 +1,355 @@
+
+{% include "store/base.html" %}
+
+
+{% load static %}
+
+
+{% block content %}
+
+<style>
+    
+    body 
+    {
+        
+        background-color: gray;
+    
+    }
+
+    gmp-place-autocomplete::part(input) {
+  padding: 12px 16px;
+  outline: none;
+  box-shadow: none;
+}
+
+/* Style the prediction dropdown box container */
+gmp-place-autocomplete::part(prediction-list) {
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+/* Customize row layout and hover states */
+gmp-place-autocomplete::part(prediction-item):hover {
+  background-color: #f3f4f6;
+  cursor: pointer;
+}
+
+/* Highlight the matching characters user typed */
+gmp-place-autocomplete::part(prediction-item-match) {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+
+</style>
+
+
+    <body>
+
+        <br>
+
+        <div class="container bg-white shadow-md p-5" style="width:500px; border-radius:20px;">
+
+            <form id="form" data-form-name="complete_order">
+                
+                {% csrf_token %}
+                <div>
+
+                    <h3> <i class="fa fa-chevron-circle-right" aria-hidden="true"></i> &nbsp; Complete your order </h3>
+
+                    <p> Please enter in the relevant information below. </p>
+ 
+
+
+                    <hr>
+
+                    <br>
+
+                    <div class="form-field">
+                    
+                        <input class="form-control" data-validate="" id="name" name="name" type="text" placeholder="Full name*" autocomplete="off" value="{{shipping_info.fullname}}" required>
+
+                    </div>
+
+
+                    <br>
+
+
+                    <div class="form-field">
+
+                        <input class="form-control" data-validate="" id="email" name="email" placeholder="Email address*" autocomplete="off" value="{{shipping_info.email}}" required>
+
+                    </div>
+
+                    
+                    <br>
+
+                    
+                    <div class="form-field">
+                        <gmp-place-autocomplete
+                        id="place-autocomplete"
+                        class="form-control"
+                        included-primary-types="street_address"
+                        included-region-codes="US"
+                        placeholder="Start typing your address...">
+                    </gmp-place-autocomplete>
+
+                        <input class="form-control" type="hidden" data-validate="" id="address1" name="address1" placeholder="Address 1*" autocomplete="off" value="{{shipping_info.address1}}" required>
+
+                    </div>
+
+
+                    <br>
+
+
+                    <div class="form-field">
+
+                        <input class="form-control" data-validate="" id="address2" type="text" name="address2" placeholder="Address 2*" autocomplete="off" value="{{shipping_info.address2}}" required>
+
+                    </div>
+
+
+                    <br>
+
+
+                    <div class="form-field">
+
+                        <input class="form-control" data-validate="" id="city" type="text" placeholder="City" name="city" autocomplete="off" value="{{shipping_info.city}}" required>
+
+                    </div>
+
+
+                    <br>
+
+
+                    <div class="form-field">
+
+                        <input class="form-control" id="state" type="text" name="state" placeholder="State (Optional)" autocomplete="off" value="{{shipping_info.state}}">
+
+                    </div>
+
+
+                    <br>
+
+
+                    <div class="form-field">
+
+                        <input class="form-control" id="zipcode" type="text" name="zipcode" placeholder="Zip code (Optional)" autocomplete="off" value="{{shipping_info.zipcode}}">
+
+                    </div>
+            
+                </div>
+
+                <br>
+
+
+
+               <!--button id="complete-order" type="submit" class="btn btn-primary navbar-btn text-white"> &nbsp; Complete order </button>
+            -->
+
+
+                <br>
+
+                <div id="paypal-button-container"></div>
+
+                <script src="https://www.paypal.com/sdk/js?client-id=BAATgjpJrHn8Z17cWTtt99kpcP8agJ2s8YacNOmOS36AuwygIrUbq5SItr4nxdmtK9uPme8Qr_-xEsKz9I&currency=USD&intent=capture" data-sdk-integration-source="integrationbuilder"></script>
+
+
+            </form>
+
+
+        </div>
+
+        
+
+        <br>
+
+
+    </body>
+
+
+    <!-- Ajax integration -->
+
+<script>
+    (g => {
+        var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary",
+            q = "__ib__", m = document, b = window;
+        b = b[c] || (b[c] = {});
+        var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams,
+            u = () => h || (h = new Promise(async (f, n) => {
+                await (a = m.createElement("script"));
+                e.set("libraries", [...r] + "");
+                for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]);
+                e.set("callback", c + ".maps." + q);
+                a.src = `https://maps.${c}apis.com/maps/api/js?` + e;
+                d[q] = f;
+                a.onerror = () => h = n(Error(p + " could not load."));
+                a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+                m.head.append(a);
+            }));
+        d[l] ? console.warn(p + " only loads once. Ignoring:", g) :
+            d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+    })({
+        key: "{{ GOOGLE_PLACES_API }}",  
+    });
+</script>
+
+ <script>
+    const paypalButtonsComponent = paypal.Buttons({
+        style: {
+            color: "white",
+            shape: "pill",
+            layout: "vertical"
+        },
+
+        onInit: function (data, actions) {
+            actions.disable();
+
+            // Required fields only (Address 2 is optional)
+            const inputs = Array.from(document.querySelectorAll('input[required][data-validate]'));
+
+            const address1Field = document.getElementById('address1');
+            const address2Field = document.getElementById('address2');
+            const cityField = document.getElementById('city');
+            const stateField = document.getElementById('state');
+            const zipField = document.getElementById('zipcode');
+
+            function check_inputs() {
+                const hasEmptyValues = inputs.some(item => item.value.trim() === '');
+                actions[hasEmptyValues ? 'disable' : 'enable']();
+            }
+
+            // ---------- Modern Place Autocomplete ----------
+            async function initPlaceAutocomplete() {
+                await google.maps.importLibrary('places');
+
+                const placeAutocomplete = document.querySelector('gmp-place-autocomplete');
+                if (!placeAutocomplete) return;
+
+                placeAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
+                    const place = placePrediction.toPlace();
+                    await place.fetchFields({ fields: ['addressComponents'] });
+
+                    // Exit early if no address data
+                    if (!place.addressComponents) return;
+
+                    // Clear previous values
+                    address1Field.value = '';
+                    cityField.value = '';
+                    stateField.value = '';
+                    zipField.value = '';
+                    if (address2Field) address2Field.value = '';
+
+                    let streetNumber = '';
+                    let route = '';
+
+                    for (const component of place.addressComponents) {
+                        const types = component.types;
+
+                        if (types.includes('street_number')) {
+                            streetNumber = component.shortText || '';
+                        }
+                        if (types.includes('route')) {
+                            route = component.shortText || '';
+                        }
+                        if (types.includes('locality') || types.includes('postal_town')) {
+                            cityField.value = component.longText || '';
+                        }
+                        if (types.includes('administrative_area_level_1')) {
+                            stateField.value = component.shortText || component.longText || '';
+                        }
+                        if (types.includes('postal_code')) {
+                            zipField.value = component.longText || '';
+                        }
+                        if (types.includes('subpremise') && address2Field) {
+                            address2Field.value = component.longText || '';
+                        }
+                    }
+
+                    // Rebuild Address 1
+                    address1Field.value = `${streetNumber} ${route}`.trim();
+
+                    // Re-check validation so PayPal button enables
+                    check_inputs();
+
+                    // Focus Address 2 for better UX
+                    if (address2Field) address2Field.focus();
+                });
+            }
+
+            initPlaceAutocomplete();
+
+            // Initial check + listen for manual typing
+            check_inputs();
+            inputs.forEach(item => {
+                item.addEventListener('input', check_inputs);
+            });
+        },
+
+        createOrder: (data, actions) => {
+            var total_price= '{{cart.get_total}}';
+            const createOrderPayload = {
+                purchase_units: [{
+                    amount: {
+                        value: total_price
+                    }
+                }]
+            };
+            return actions.order.create(createOrderPayload);
+        },
+
+        onApprove: (data, actions) => {
+            const captureOrderHandler = (details) => {
+                const payerName = details.payer.name.given_name;
+                const $form= $('form[data-form-name="complete_order"]');
+                $.ajax({
+                    type:'POST' ,
+                    url: '{% url "complete_order" %}' ,
+                    data:$form.serialize(),
+                    success:function(json){
+                        window.location.replace('{% url "payment_success" %}');
+                    },
+                    error:function(xhr, errmsg, err){
+                        window.location.replace('{% url "payment_failed" %}');
+                    }
+
+                },
+            
+                )
+
+            };
+
+            return actions.order.capture().then(captureOrderHandler);
+        },
+
+
+        // handle unrecoverable errors
+        onError: (err) => {
+            console.error('An error prevented the buyer from checking out with PayPal');
+
+  
+
+        }
+    });
+        
+
+
+
+    paypalButtonsComponent
+        .render("#paypal-button-container")
+        .catch((err) => {
+            console.error('PayPal Buttons failed to render');
+        });
+
+    // AJAX form submit
+    
+</script>
+<script>
+    
+    
+
+</script>
+
+
+{% endblock %}
