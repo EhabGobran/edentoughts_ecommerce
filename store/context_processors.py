@@ -1,32 +1,28 @@
 # store/context_processors.py
-import asyncio
 from django.core.cache import cache
-from asgiref.sync import async_to_sync
+from asgiref.sync import sync_to_async
 from .models import Category
 
 def global_categories(request):
-    """Safe context processor to load categories across both sync and async pipelines."""
-    is_async = False
-    try:
-        asyncio.get_running_loop()
-        is_async = True
-    except RuntimeError:
-        pass
-
-    if is_async:
-        # 1. Async safe pipeline
-        category_list = async_to_sync(cache.aget)('global_categories')
-        if category_list is None:
-            # Safely fetch database rows via an async closure execution
-            def fetch_db_list():
-                return list(Category.objects.all())
-            category_list = async_to_sync(fetch_db_list)()
-            async_to_sync(cache.aset)('global_categories', category_list, timeout=None)
-    else:
-        # 2. Standard synchronous fallback pipeline
-        category_list = cache.get('global_categories')
-        if category_list is None:
+    """
+    Completely safe context processor. Uses native synchronous cache 
+    and standard fallbacks which Django/Daphne handle seamlessly.
+    """
+    # 1. Look for the categories in the cache using the standard sync getter
+    category_list = cache.get('global_categories')
+    
+    # 2. If the cache is empty, query the database safely
+    if category_list is None:
+        try:
+            # Standard database query
             category_list = list(Category.objects.all())
-            cache.set('global_categories', category_list, timeout=None)
+        except RuntimeError:
+            # Fallback if Daphne blocks a direct database evaluation on the thread loop
+            fetch_db = sync_to_async(lambda: list(Category.objects.all()), thread_sensitive=True)
+            import asyncio
+            category_list = asyncio.run(fetch_db())
+            
+        # 3. Save the results back into the cache
+        cache.set('global_categories', category_list, timeout=None)
 
     return {"category_list": category_list}
