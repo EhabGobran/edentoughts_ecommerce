@@ -1,6 +1,5 @@
 # store/context_processors.py
 from django.core.cache import cache
-from asgiref.sync import sync_to_async
 from .models import Category
 
 async def global_categories(request):
