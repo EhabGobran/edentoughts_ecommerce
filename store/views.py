@@ -11,15 +11,14 @@ def store(request):
     products_list = Product.objects.all()
     return render(request ,"store/store.html" , context= {"products_list" :list(products_list)})
 
-
-@require_safe
-async def category(request):
+async def global_categories(request):
     category_list = await cache.aget('global_categories')
+    
     if category_list is None:
-        category_list = Category.objects.all()
-        await cache.aset('global_categories',list(category_list),timeout= None)
-
-    return {"category_list" : category_list}
+        category_list = [c async for c in Category.objects.all()]
+        await cache.aset('global_categories', category_list, timeout=None)
+    
+    return {"category_list": category_list}
 
 @require_safe
 async def product_info(request , product_slug):
