@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from .forms import CreateUserForm, LoginForm, UpdateForm
 from django.contrib.auth.models import User
-from django.views.decorators.http import require_http_methods, require_safe, require_GET
 from django.contrib import messages
 from ecommerce.constants import request_method_enum
 from payment.forms import ShippingForm
@@ -14,31 +13,30 @@ from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from asgiref.sync import sync_to_async
+from django.http import HttpResponseNotAllowed
 
-# Create your views here.
-
-@require_http_methods(list(request_method_enum.keys()))
-async def register(request):
+def register(request):
+    allowed_methods = list(request_method_enum.keys())
+    if request.method not in allowed_methods:
+        return HttpResponseNotAllowed(allowed_methods)
     if request.method == "POST":
         form = CreateUserForm(request.POST)
-        # Inline sync execution for form validation
-        if await sync_to_async(form.is_valid)():
-            user = await sync_to_async(form.save)(commit=False)
+        if form.is_valid():
+            user = form.save(commit=False)
             user.is_active = False
-            await user.asave()
+            user.save()
             
-            current_site = await sync_to_async(get_current_site)(request)
+            current_site = get_current_site(request)
             subject = "email verification"
             message = render_to_string('account/registration/email_verification.html', {
                 "user": user,
                 "uid": urlsafe_base64_encode(force_bytes(user.pk)),
                 "domain": current_site.domain,
-                "token": await sync_to_async(user_tokenizer_generate.make_token)(user),
+                "token": user_tokenizer_generate.make_token(user),
                 "protocol": "https" if request.is_secure() else "http",
             })
             
-            await sync_to_async(user.email_user)(subject=subject, message=message)
+            user.email_user(subject=subject, message=message)
             return redirect('email_verification_sent')
     else:
         form = CreateUserForm()
@@ -46,39 +44,42 @@ async def register(request):
     return render(request, 'account/registration/register.html', {"form": form})
 
 
-@require_GET
-async def email_verification(request, uidb64, token):
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = await User.objects.aget(pk=uid)
-        
-        if user and await sync_to_async(user_tokenizer_generate.check_token)(user, token):
-            user.is_active = True
-            await user.asave()
-            return redirect('email_verification_success')
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        pass
-        
+def email_verification(request, uidb64, token):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    uid = force_str(urlsafe_base64_decode(uidb64))
+    user = User.objects.get(pk=uid)
+    
+    if user and user_tokenizer_generate.check_token(user, token):
+        user.is_active = True
+        user.save()
+        return redirect('email_verification_success')
+    
     return redirect('emailverification_failed')
 
 
-@require_safe
 def email_verification_sent(request):
+    if request.method not in ["GET", "HEAD"]:
+        return HttpResponseNotAllowed(["GET", "HEAD"])
     return render(request, 'account/registration/email_verification_sent.html')
 
 
-@require_safe
 def email_verification_success(request):
+    if request.method not in ["GET", "HEAD"]:
+        return HttpResponseNotAllowed(["GET", "HEAD"])
     return render(request, 'account/registration/email_verification_success.html')
 
 
-@require_safe
 def emailverification_failed(request):
+    if request.method not in ["GET", "HEAD"]:
+        return HttpResponseNotAllowed(["GET", "HEAD"])
     return render(request, 'account/registration/emailverification_failed.html')
 
 
-@require_http_methods(list(request_method_enum.keys()))
 def Login_view(request):
+    allowed_methods = list(request_method_enum.keys())
+    if request.method not in allowed_methods:
+        return HttpResponseNotAllowed(allowed_methods)
     if request.method == "POST":
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
@@ -94,8 +95,10 @@ def Login_view(request):
     return render(request, 'account/login.html', {'form': form})
 
 
-@require_safe
 def logout_view(request):
+    if request.method not in ["GET", "HEAD"]:
+        return HttpResponseNotAllowed(["GET", "HEAD"])
+
     for key in list(request.session.keys()):
         if key != 'session-key':
             del request.session[key]
@@ -106,17 +109,21 @@ def logout_view(request):
 
 @login_required(login_url="login")
 def dashboard_view(request):
+    if request.method not in ["GET", "HEAD"]:
+        return HttpResponseNotAllowed(["GET", "HEAD"])
     return render(request, 'account/dashboard.html')
 
 
 @login_required(login_url="login")
-async def profile_managment(request):
+def profile_managment(request):
+    allowed_methods = list(request_method_enum.keys())
+    if request.method not in allowed_methods:
+        return HttpResponseNotAllowed(allowed_methods)
+    
     if request.method == "POST":
         form = UpdateForm(request.POST, instance=request.user)
-        # Fix: Wrapped form validation inside sync_to_async
-        if await sync_to_async(form.is_valid)():
-            # Fix: ModelForms do not have .asave(). Wrap standard .save() instead.
-            await sync_to_async(form.save)()
+        if form.is_valid():
+            form.save()
             return redirect('dashboard')
     else:
         form = UpdateForm(instance=request.user)
@@ -125,20 +132,27 @@ async def profile_managment(request):
 
 
 @login_required(login_url="login")
-async def delete_account(request):
+def delete_account(request):
+    allowed_methods = list(request_method_enum.keys())
+    if request.method not in allowed_methods:
+        return HttpResponseNotAllowed(allowed_methods)
+    
     if request.method == "POST":
-        user = await User.objects.aget(id=request.user.id)
-        await user.adelete()
+        user = User.objects.get(id=request.user.id)
+        user.delete()
         return redirect('store')
         
     return render(request, 'account/delete_account.html')
 
 
 @login_required(login_url='login')
-@require_http_methods(list(request_method_enum.keys()))
-async def manage_shipping(request):
+def manage_shipping(request):
+    allowed_methods = list(request_method_enum.keys())
+    if request.method not in allowed_methods:
+        return HttpResponseNotAllowed(allowed_methods)
+    
     try:
-        shipping_instance = await Shipping_Address.objects.aget(user=request.user.pk)
+        shipping_instance = Shipping_Address.objects.get(user=request.user.pk)
     except Shipping_Address.DoesNotExist:
         shipping_instance = None
         
@@ -146,11 +160,10 @@ async def manage_shipping(request):
     shipping_form = ShippingForm(request_method, instance=shipping_instance)
     
     if request.method == "POST":
-        # Fix: Forms are sync; execute validation via inline sync_to_async wrapper
-        if await sync_to_async(shipping_form.is_valid)():
-            shipping_db_row = await sync_to_async(shipping_form.save)(commit=False)
+        if shipping_form.is_valid():
+            shipping_db_row = shipping_form.save(commit=False)
             shipping_db_row.user = request.user
-            await shipping_db_row.asave()
+            shipping_db_row.save()
             return redirect('dashboard')
             
     return render(request, 'account/manage_shipping.html', {'form': shipping_form})

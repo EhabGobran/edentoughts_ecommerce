@@ -37,7 +37,6 @@ CSRF_TRUSTED_ORIGINS= ['https://edenthoughts.com','https://www.edenthoughts.com'
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -95,7 +94,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ecommerce.wsgi.application'
-ASGI_APPLICATION = 'ecommerce.asgi.application'
 
 
 # Database

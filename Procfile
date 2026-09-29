@@ -1,1 +1,1 @@
-web: daphne -b 0.0.0.0 -p 5000 ecommerce.asgi:application
+web: gunicorn ecommerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
