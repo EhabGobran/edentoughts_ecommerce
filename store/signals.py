@@ -6,4 +6,4 @@ from django.core.cache import cache
 @receiver(post_delete , sender= Category)
 @receiver(post_save , sender= Category)
 def clear_category_cache(sender ,instance ,**kwargs):
-    cache.clear("global_categories")
+    cache.delete("global_categories")
