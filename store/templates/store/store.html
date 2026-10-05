@@ -28,11 +28,11 @@
 
                 </p>
 
-
+                  {%if not user.is_authenticated%}
                 <br>
         
                 <a href="{% url 'register' %}" class="btn btn-primary my-2"> Create an account </a>
-                
+                {%endif%}
                 
             </div>
         
